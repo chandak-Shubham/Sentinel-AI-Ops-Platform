@@ -49,6 +49,36 @@ export interface Incident {
   resolved_at?: string | null;
 }
 
+export interface IncidentTimelineEntry {
+  id: number;
+  incident_id: number;
+  action_type: string;
+  message?: string | null;
+  performed_by?: number | null;
+  created_at?: string | null;
+}
+
+export interface UpdateIncidentStatusPayload {
+  incidentId: number;
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+}
+
+export type IncidentRealtimeEvent =
+  | {
+      event: "incident_created";
+      incident_id: number;
+      title?: string;
+      severity?: Severity;
+      status?: IncidentStatus;
+      team_id?: number | null;
+    }
+  | {
+      event: "incident_status_changed";
+      incident_id: number;
+      old_status?: IncidentStatus;
+      new_status?: IncidentStatus;
+    };
+
 export interface CreateIncidentPayload {
   title: string;
   description: string;

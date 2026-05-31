@@ -2,8 +2,9 @@
 
 import { useMemo } from "react";
 import { useParams } from "next/navigation";
-import { Clock, History } from "lucide-react";
-import { useIncidents, useTeams } from "@/hooks/use-api";
+import { CheckCircle2, History, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { useIncidentTimeline, useIncidents, useTeams, useUpdateIncidentStatus } from "@/hooks/use-api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +17,8 @@ export default function IncidentDetailsPage() {
   const incidents = useIncidents();
   const teams = useTeams();
   const incidentId = Number(params.id);
+  const timeline = useIncidentTimeline(incidentId);
+  const updateStatus = useUpdateIncidentStatus();
   const incident = useMemo(() => incidents.data?.find((item) => item.id === incidentId), [incidents.data, incidentId]);
   const teamName = teams.data?.find((team) => team.id === incident?.team_id)?.name ?? (incident?.team_id ? `Team ${incident.team_id}` : "Unassigned");
 
@@ -63,10 +66,28 @@ export default function IncidentDetailsPage() {
               <CardDescription>The backend does not currently expose a status update endpoint.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {["Mark In Progress", "Mark Resolved", "Close Incident"].map((label) => (
-                <Button key={label} className="w-full justify-start" variant="outline" disabled>
-                  <Clock className="h-4 w-4" />
-                  {label}
+              {[
+                { label: "Mark In Progress", status: "IN_PROGRESS" as const },
+                { label: "Mark Resolved", status: "RESOLVED" as const },
+                { label: "Close Incident", status: "CLOSED" as const }
+              ].map((action) => (
+                <Button
+                  key={action.status}
+                  className="w-full justify-start"
+                  variant={incident.status === action.status ? "secondary" : "outline"}
+                  disabled={updateStatus.isPending || incident.status === action.status}
+                  onClick={() =>
+                    updateStatus.mutate(
+                      { incidentId, status: action.status },
+                      {
+                        onSuccess: () => toast.success(`Incident updated to ${action.status}`),
+                        onError: (error: Error) => toast.error(error.message || "Unable to update status")
+                      }
+                    )
+                  }
+                >
+                  {updateStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  {action.label}
                 </Button>
               ))}
             </CardContent>
@@ -76,16 +97,26 @@ export default function IncidentDetailsPage() {
               <CardTitle>Timeline</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-3">
-                <span className="mt-1 flex h-8 w-8 items-center justify-center rounded-md bg-muted">
-                  <History className="h-4 w-4" />
-                </span>
-                <div>
-                  <p className="text-sm font-medium">Incident created</p>
-                  <p className="text-sm text-muted-foreground">{formatDate(incident.created_at)}</p>
+              {timeline.isLoading && <div className="text-sm text-muted-foreground">Loading timeline...</div>}
+              {timeline.isError && <p className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">Unable to load incident timeline.</p>}
+              {!timeline.isLoading && !timeline.isError && (timeline.data ?? []).length === 0 && (
+                <p className="rounded-md border bg-muted p-3 text-sm text-muted-foreground">No timeline events are available for this incident yet.</p>
+              )}
+              {(timeline.data ?? []).map((entry) => (
+                <div key={entry.id} className="relative flex gap-3 rounded-md border p-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/12 text-primary">
+                    <History className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{entry.action_type.replace(/_/g, " ")}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{entry.message ?? "Timeline event recorded."}</p>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span>{formatDate(entry.created_at)}</span>
+                      <span>{entry.performed_by ? `User ${entry.performed_by}` : "System"}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <p className="rounded-md border bg-muted p-3 text-sm text-muted-foreground">Detailed incident history will appear when the backend exposes timeline data.</p>
+              ))}
             </CardContent>
           </Card>
         </div>
