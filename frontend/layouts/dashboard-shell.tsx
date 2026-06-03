@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Activity, Bell, LogOut, Menu, MessageSquare, ScrollText, Settings, ShieldAlert, X } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
+import { useIncidentRealtime } from "@/hooks/use-incident-realtime";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const auth = useAuth();
   const [open, setOpen] = useState(false);
+  useIncidentRealtime();
 
   const sidebar = (
     <aside className="flex h-full w-72 flex-col border-r bg-card">

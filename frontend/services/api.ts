@@ -3,14 +3,18 @@ import type {
   CreateUserPayload,
   CreateUserResponse,
   Incident,
+  IncidentTimelineEntry,
   LogEntry,
   LoginPayload,
   Role,
   Team,
-  TokenResponse
+  TokenResponse,
+  UpdateIncidentStatusPayload
 } from "@/types/api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+
+export const WS_URL = API_BASE_URL.replace(/^http/, "ws").replace(/\/$/, "") + "/ws";
 
 export class ApiError extends Error {
   status: number;
@@ -69,6 +73,12 @@ export const api = {
   teams: () => apiRequest<Team[]>("/teams"),
   rolesByTeam: (teamId: number) => apiRequest<Role[]>(`/roles/team/${teamId}`),
   incidents: () => apiRequest<Incident[]>("/incidents/"),
+  incidentTimeline: (incidentId: number) => apiRequest<IncidentTimelineEntry[]>(`/incidents/${incidentId}/timeline`),
+  updateIncidentStatus: ({ incidentId, status }: UpdateIncidentStatusPayload) =>
+    apiRequest<Incident>(`/incidents/${incidentId}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status })
+    }),
   createIncident: (payload: CreateIncidentPayload) =>
     apiRequest<Incident>("/incidents/", {
       method: "POST",
