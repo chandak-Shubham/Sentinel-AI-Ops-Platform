@@ -1,5 +1,4 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
 
 class LoginRequest(BaseModel):
     email: EmailStr
@@ -10,7 +9,7 @@ class CreateUserRequest(BaseModel):
     email: EmailStr
     password: str
     team_id: int 
-    role_id: Optional[int] = None
+    role_id: int
 
 class TokenResponse(BaseModel):
     access_token: str

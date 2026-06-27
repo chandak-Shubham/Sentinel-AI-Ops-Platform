@@ -1,10 +1,9 @@
 from fastapi import FastAPI
+import app.models
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth_routes import router as auth_router
-from app.routes.team_routes import router as team_router
 from app.routes.incident_routes import router as incident_router
-from app.routes.log_routes import router as log_router
-from app.routes.websocket_routes import router as websocket_router
+from app.routes.incident_routes import router as incident_router
 
 app = FastAPI()
 
@@ -17,10 +16,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
-app.include_router(team_router)
 app.include_router(incident_router)
-app.include_router(log_router)
-app.include_router(websocket_router)
 
 @app.get("/")
 def home():

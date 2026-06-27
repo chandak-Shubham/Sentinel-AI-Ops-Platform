@@ -1,14 +1,8 @@
 from sqlalchemy.orm import Session
-
 from app.models.user import User
 from app.models.team import Team
 from app.models.role import Role
-
-from app.utils.security import (
-    verify_password,
-    hash_password
-)
-
+from app.utils.security import (verify_password,hash_password)
 from app.utils.jwt import create_access_token
 
 
@@ -34,11 +28,8 @@ def login_user(
         {
             "user_id": user.id,
             "email": user.email,
-            "role": (
-                user.role.role_name
-                if user.role
-                else "Admin"
-            )
+            "role": user.role.role_name,
+            "team_id": user.team_id
         }
     )
 
@@ -49,11 +40,10 @@ def create_user(
     full_name: str,
     email: str,
     password: str,
-    role_id: int | None,
+    role_id: int,
     team_id: int,
     db: Session
 ):
-
     existing_user = db.query(User).filter(
         User.email == email
     ).first()
@@ -68,18 +58,13 @@ def create_user(
     if not team:
         return None
 
-    # Admin team has no role
-    if team.team_name == "Admin":
-        role_id = None
+    role = db.query(Role).filter(
+        Role.id == role_id,
+        Role.team_id == team_id
+    ).first()
 
-    else:
-        role = db.query(Role).filter(
-            Role.id == role_id,
-            Role.team_id == team_id
-        ).first()
-
-        if not role:
-            return None
+    if not role:
+        return None
 
     hashed_password = hash_password(password)
 
