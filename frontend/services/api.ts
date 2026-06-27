@@ -9,6 +9,7 @@ import type {
   Role,
   Team,
   TokenResponse,
+  UpdateIncidentPayload,
   UpdateIncidentStatusPayload
 } from "@/types/api";
 
@@ -33,7 +34,7 @@ function getToken() {
   return window.localStorage.getItem("sentinel_access_token");
 }
 
-async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
@@ -73,11 +74,25 @@ export const api = {
   teams: () => apiRequest<Team[]>("/teams"),
   rolesByTeam: (teamId: number) => apiRequest<Role[]>(`/roles/team/${teamId}`),
   incidents: () => apiRequest<Incident[]>("/incidents/"),
+  incident: (incidentId: number) => apiRequest<Incident>(`/incidents/${incidentId}`),
   incidentTimeline: (incidentId: number) => apiRequest<IncidentTimelineEntry[]>(`/incidents/${incidentId}/timeline`),
   updateIncidentStatus: ({ incidentId, status }: UpdateIncidentStatusPayload) =>
-    apiRequest<Incident>(`/incidents/${incidentId}/status`, {
+    apiRequest<Incident>(`/incidents/${incidentId}`, {
       method: "PATCH",
       body: JSON.stringify({ status })
+    }),
+  updateIncident: ({ incidentId, data }: UpdateIncidentPayload) =>
+    apiRequest<Incident>(`/incidents/${incidentId}`, {
+      method: "PATCH",
+      body: JSON.stringify(data)
+    }),
+  resolveIncident: (incidentId: number) =>
+    apiRequest<Incident>(`/incidents/${incidentId}/resolve`, {
+      method: "PATCH"
+    }),
+  deleteIncident: (incidentId: number) =>
+    apiRequest<{ message: string }>(`/incidents/${incidentId}`, {
+      method: "DELETE"
     }),
   createIncident: (payload: CreateIncidentPayload) =>
     apiRequest<Incident>("/incidents/", {

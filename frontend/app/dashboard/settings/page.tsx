@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const profileSchema = z.object({
   full_name: z.string().min(2, "Full name is required"),
@@ -48,6 +49,19 @@ export default function SettingsPage() {
         <p className="text-sm text-muted-foreground">Profile forms are ready for backend profile endpoints.</p>
       </div>
       <div className="grid gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Theme</CardTitle>
+            <CardDescription>Sentinel defaults to a dark professional workspace.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">Appearance</p>
+              <p className="text-sm text-muted-foreground">Toggle between dark and light themes.</p>
+            </div>
+            <ThemeToggle />
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

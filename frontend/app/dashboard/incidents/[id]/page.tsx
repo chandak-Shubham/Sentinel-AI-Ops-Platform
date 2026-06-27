@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo } from "react";
-import { useParams } from "next/navigation";
-import { CheckCircle2, History, Loader2 } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { CheckCircle2, History, Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useIncidentTimeline, useIncidents, useTeams, useUpdateIncidentStatus } from "@/hooks/use-api";
+import { useDeleteIncident, useIncident, useIncidentTimeline, useIncidents, useResolveIncident, useTeams, useUpdateIncidentStatus } from "@/hooks/use-api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,16 +14,20 @@ import { formatDate } from "@/lib/utils";
 
 export default function IncidentDetailsPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const incidents = useIncidents();
   const teams = useTeams();
   const incidentId = Number(params.id);
+  const incidentQuery = useIncident(incidentId);
   const timeline = useIncidentTimeline(incidentId);
   const updateStatus = useUpdateIncidentStatus();
-  const incident = useMemo(() => incidents.data?.find((item) => item.id === incidentId), [incidents.data, incidentId]);
+  const resolveIncident = useResolveIncident();
+  const deleteIncident = useDeleteIncident();
+  const incident = useMemo(() => incidentQuery.data ?? incidents.data?.find((item) => item.id === incidentId), [incidentQuery.data, incidents.data, incidentId]);
   const teamName = teams.data?.find((team) => team.id === incident?.team_id)?.name ?? (incident?.team_id ? `Team ${incident.team_id}` : "Unassigned");
 
-  if (incidents.isLoading) return <Skeleton className="h-96" />;
-  if (incidents.isError) return <ErrorState message="Unable to load incident details." />;
+  if (incidentQuery.isLoading || incidents.isLoading) return <Skeleton className="h-96" />;
+  if (incidentQuery.isError && incidents.isError) return <ErrorState message="Unable to load incident details." />;
   if (!incident) return <EmptyState title="Incident not found" description="The backend list endpoint did not return this incident." />;
 
   return (
@@ -33,7 +37,7 @@ export default function IncidentDetailsPage() {
           <h1 className="text-2xl font-semibold">{incident.title}</h1>
           <p className="text-sm text-muted-foreground">Incident #{incident.id}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <SeverityBadge value={incident.severity} />
           <StatusBadge value={incident.status} />
         </div>
@@ -42,7 +46,7 @@ export default function IncidentDetailsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Details</CardTitle>
-            <CardDescription>Incidents are permanent records. No delete action is available.</CardDescription>
+            <CardDescription>Review ownership, timestamps, and operational context.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div>
@@ -62,13 +66,16 @@ export default function IncidentDetailsPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Status Actions</CardTitle>
-              <CardDescription>The backend does not currently expose a status update endpoint.</CardDescription>
+              <CardTitle>Actions</CardTitle>
+              <CardDescription>Update, resolve, or remove this incident record.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              <Button className="w-full justify-start" variant="outline" onClick={() => toast.info("Edit form is ready to connect to PATCH /incidents/{id}.")}>
+                <Pencil className="h-4 w-4" />
+                Edit
+              </Button>
               {[
                 { label: "Mark In Progress", status: "IN_PROGRESS" as const },
-                { label: "Mark Resolved", status: "RESOLVED" as const },
                 { label: "Close Incident", status: "CLOSED" as const }
               ].map((action) => (
                 <Button
@@ -90,6 +97,38 @@ export default function IncidentDetailsPage() {
                   {action.label}
                 </Button>
               ))}
+              <Button
+                className="w-full justify-start"
+                variant="secondary"
+                disabled={resolveIncident.isPending || incident.status === "RESOLVED"}
+                onClick={() =>
+                  resolveIncident.mutate(incidentId, {
+                    onSuccess: () => toast.success("Incident resolved"),
+                    onError: (error: Error) => toast.error(error.message || "Unable to resolve incident")
+                  })
+                }
+              >
+                {resolveIncident.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                Resolve
+              </Button>
+              <Button
+                className="w-full justify-start"
+                variant="destructive"
+                disabled={deleteIncident.isPending}
+                onClick={() => {
+                  if (!window.confirm("Delete this incident? This action cannot be undone.")) return;
+                  deleteIncident.mutate(incidentId, {
+                    onSuccess: () => {
+                      toast.success("Incident deleted");
+                      router.push("/dashboard/incidents");
+                    },
+                    onError: (error: Error) => toast.error(error.message || "Unable to delete incident")
+                  });
+                }}
+              >
+                {deleteIncident.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Delete
+              </Button>
             </CardContent>
           </Card>
           <Card>
