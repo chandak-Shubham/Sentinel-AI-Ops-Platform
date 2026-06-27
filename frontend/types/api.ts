@@ -63,6 +63,14 @@ export interface UpdateIncidentStatusPayload {
   status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
 }
 
+export interface UpdateIncidentPayload {
+  incidentId: number;
+  data: Partial<CreateIncidentPayload> & {
+    status?: IncidentStatus;
+    assigned_to?: number | null;
+  };
+}
+
 export type IncidentRealtimeEvent =
   | {
       event: "incident_created";
@@ -93,8 +101,18 @@ export interface LogEntry {
   event_type: string;
   log_level: LogLevel;
   message: string;
+  payload?: unknown;
   incident_id?: number | null;
   created_at?: string | null;
+}
+
+export interface WebhookLog {
+  id: number;
+  service: string;
+  level: LogLevel;
+  message: string;
+  payload: unknown;
+  received_at: string | null;
 }
 
 export interface JwtProfile {

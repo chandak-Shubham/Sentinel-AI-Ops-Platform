@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Pagination } from "@/components/ui/pagination";
-import { Search } from "lucide-react";
+import { ExternalLink, Plus, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useIncidents, useTeams } from "@/hooks/use-api";
 import { CreateIncidentDialog } from "@/features/incidents/create-incident-dialog";
 import { Input } from "@/components/ui/input";
@@ -47,7 +48,15 @@ export default function IncidentsPage() {
           <h1 className="text-2xl font-semibold">Incidents</h1>
           <p className="text-sm text-muted-foreground">Search, filter, review, and create incident records.</p>
         </div>
-        <CreateIncidentDialog />
+        <div className="flex flex-wrap gap-2">
+          <Link href="/dashboard/incidents/new">
+            <Button variant="outline">
+              <Plus className="h-4 w-4" />
+              New Page
+            </Button>
+          </Link>
+          <CreateIncidentDialog />
+        </div>
       </div>
       <Card>
         <CardContent className="p-4">
@@ -90,6 +99,7 @@ export default function IncidentsPage() {
                   <TableHead>Assigned To</TableHead>
                   <TableHead>Team</TableHead>
                   <TableHead>Created At</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -104,6 +114,11 @@ export default function IncidentsPage() {
                     <TableCell>{incident.assigned_to ? `User ${incident.assigned_to}` : "Unassigned"}</TableCell>
                     <TableCell>{teamName(incident.team_id)}</TableCell>
                     <TableCell>{formatDate(incident.created_at)}</TableCell>
+                    <TableCell>
+                      <Link className="inline-flex items-center gap-1 text-sm text-primary" href={`/dashboard/incidents/${incident.id}`}>
+                        Open <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

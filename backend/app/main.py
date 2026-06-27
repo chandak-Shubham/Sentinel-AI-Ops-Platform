@@ -3,6 +3,7 @@ import app.models
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth_routes import router as auth_router
 from app.routes.incident_routes import router as incident_router
+from app.routes.webhook_routes import router as webhook_router
 
 app = FastAPI()
 
@@ -16,6 +17,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(incident_router)
+app.include_router(webhook_router)
 
 @app.get("/")
 def home():
