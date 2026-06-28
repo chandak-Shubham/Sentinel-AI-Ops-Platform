@@ -22,12 +22,12 @@ router = APIRouter(
     "/logs",
     response_model=WebhookPipelineResponse
 )
-def receive_webhook(
+async def receive_webhook(
     data: WebhookLogCreate,
     db: Session = Depends(get_db)
 ):
 
-    return webhook_service.create_webhook_log(
+    return await webhook_service.create_webhook_log(
         data=data,
         db=db
     )

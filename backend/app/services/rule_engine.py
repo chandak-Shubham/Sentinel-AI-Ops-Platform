@@ -1,21 +1,20 @@
-def classify_event(event_type: str):
+def validate_ai_decision(webhook, analysis):
 
-    if event_type == "github_commit":
-        return "INFO"
+    # AI unavailable -> fallback to log level
+    if analysis.summary == "AI analysis unavailable.":
 
-    elif event_type == "deployment_started":
-        return "INFO"
+        return webhook.level.upper() in {
+            "ERROR",
+            "CRITICAL"
+        }
 
-    elif event_type == "high_cpu":
-        return "WARNING"
+    if not analysis.should_create_incident:
+        return False
 
-    elif event_type == "memory_spike":
-        return "WARNING"
+    if analysis.confidence < 0.75:
+        return False
 
-    elif event_type == "deployment_failed":
-        return "ERROR"
+    if webhook.level.upper() == "INFO":
+        return False
 
-    elif event_type == "database_down":
-        return "CRITICAL"
-
-    return "INFO"
+    return True

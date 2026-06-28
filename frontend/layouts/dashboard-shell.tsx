@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Activity, Bell, ChevronLeft, ChevronRight, LogOut, Menu, Search, ScrollText, Settings, ShieldAlert, UserRound, Users, Webhook, X } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
-import { useIncidentRealtime } from "@/hooks/use-incident-realtime";
+import { useDashboardRealtimeStatus } from "@/providers/realtime-provider";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  useIncidentRealtime();
+  const realtimeStatus = useDashboardRealtimeStatus();
   const visibleNav = nav.filter((item) => {
     if (item.href === "/dashboard/users") return canCreateUsers(auth.profile);
     if (item.href === "/dashboard/activity-logs" || item.href === "/dashboard/webhook-logs") return canViewLogs(auth.profile);
@@ -125,6 +125,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-xs font-medium text-muted-foreground">
+              <span aria-hidden="true">{realtimeStatus === "connected" ? "🟢" : realtimeStatus === "reconnecting" ? "🟡" : "🔴"}</span>
+              <span className="capitalize">{realtimeStatus}</span>
+            </div>
             <Button variant="outline" size="icon" title="Notifications">
               <Bell className="h-4 w-4" />
             </Button>

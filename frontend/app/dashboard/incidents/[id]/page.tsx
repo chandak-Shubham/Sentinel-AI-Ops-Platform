@@ -14,7 +14,15 @@ import { SeverityBadge, StatusBadge } from "@/components/status-badges";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { canDeleteIncidents, canMutateIncidents, canViewLogs } from "@/lib/rbac";
-import { findIncidentAnalysis, formatConfidence, isAIGeneratedIncident } from "@/lib/ai";
+import {
+  findIncidentAnalysis,
+  formatConfidence,
+  getAIDecision,
+  getRuleEngineValidation,
+  isAIGeneratedIncident,
+  isAIUnavailable,
+  normalizeConfidence
+} from "@/lib/ai";
 
 export default function IncidentDetailsPage() {
   const params = useParams<{ id: string }>();
@@ -36,6 +44,29 @@ export default function IncidentDetailsPage() {
   const aiGenerated = Boolean(incident && isAIGeneratedIncident(incident));
   const aiActivity = (activityLogs.data ?? []).find((entry) => entry.incident_id === incidentId && entry.action === "AI_CREATE_INCIDENT");
   const aiAnalysis = incident ? findIncidentAnalysis(incident, webhookLogs.data ?? []) : null;
+  const aiSummary = aiAnalysis?.summary ?? incident?.ai_summary ?? incident?.description ?? "No AI summary is available.";
+  const aiUnavailable = isAIUnavailable(aiSummary);
+  const aiDecision = getAIDecision(aiAnalysis, incident);
+  const ruleEngineValidation = getRuleEngineValidation(aiAnalysis, incident);
+  const validationLabel = aiUnavailable
+    ? "Fallback Rule Validation Used"
+    : ruleEngineValidation.toLowerCase().includes("reject")
+      ? "Rejected"
+      : ruleEngineValidation.toLowerCase().includes("approved") || ruleEngineValidation.toLowerCase().includes("valid")
+        ? "Validated"
+        : ruleEngineValidation;
+  const validationVariant = aiUnavailable ? "medium" : validationLabel === "Rejected" ? "critical" : validationLabel === "Validated" ? "low" : "secondary";
+  const hasAIAnalysis = Boolean(
+    aiAnalysis ||
+    incident?.ai_summary ||
+    incident?.ai_root_cause ||
+    incident?.ai_recommendations?.length ||
+    incident?.ai_confidence != null ||
+    incident?.ai_decision ||
+    incident?.rule_engine_validation ||
+    incident?.rule_engine_status ||
+    incident?.validation_status
+  );
 
   if (incidentQuery.isLoading || incidents.isLoading) return <Skeleton className="h-96" />;
   if (incidentQuery.isError && incidents.isError) return <ErrorState message="Unable to load incident details." />;
@@ -79,7 +110,7 @@ export default function IncidentDetailsPage() {
             </div>
           </CardContent>
         </Card>
-        {aiGenerated && (
+        {hasAIAnalysis && (
           <Card className="border-primary/30 lg:col-start-1">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -89,7 +120,22 @@ export default function IncidentDetailsPage() {
               <CardDescription>Context generated from the webhook AI pipeline.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <AnalysisInfo label="AI Summary" value={aiAnalysis?.summary ?? incident.ai_summary ?? incident.description ?? "No AI summary is available."} />
+              {aiUnavailable && (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-4">
+                  <Badge variant="medium">AI Temporarily Unavailable</Badge>
+                  <p className="mt-2 text-sm text-muted-foreground">Fallback Rule Validation Used</p>
+                </div>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Info label="AI Decision" value={aiDecision} />
+                <div className="rounded-md border p-3">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Rule Engine Validation</p>
+                  <div className="mt-2">
+                    <Badge variant={validationVariant}>{validationLabel}</Badge>
+                  </div>
+                </div>
+              </div>
+              <AnalysisInfo label="AI Summary" value={aiSummary} />
               <AnalysisInfo label="AI Root Cause" value={aiAnalysis?.root_cause ?? incident.ai_root_cause ?? "Root cause was not included in this incident response."} />
               <div className="rounded-md border p-4">
                 <p className="text-sm font-semibold">AI Recommendations</p>
@@ -104,7 +150,11 @@ export default function IncidentDetailsPage() {
                 )}
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Info label="Confidence" value={formatConfidence(aiAnalysis?.confidence ?? incident.ai_confidence)} />
+                <ConfidenceMeter value={aiAnalysis?.confidence ?? incident.ai_confidence} />
+                <div className="rounded-md border p-3">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Severity</p>
+                  <div className="mt-2"><SeverityBadge value={aiAnalysis?.severity ?? incident.severity} /></div>
+                </div>
                 <Info label="AI Activity" value={aiActivity ? "AI created this incident from a webhook." : "Created from webhook source."} />
               </div>
             </CardContent>
@@ -237,6 +287,20 @@ function Info({ label, value }: { label: string; value: string }) {
     <div className="rounded-md border p-3">
       <p className="text-xs font-semibold uppercase text-muted-foreground">{label}</p>
       <p className="mt-1 text-sm">{value}</p>
+    </div>
+  );
+}
+
+function ConfidenceMeter({ value }: { value?: number | null }) {
+  const normalized = normalizeConfidence(value);
+
+  return (
+    <div className="rounded-md border p-3">
+      <p className="text-xs font-semibold uppercase text-muted-foreground">AI Confidence</p>
+      <p className="mt-1 text-sm">{formatConfidence(value)}</p>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+        <div className="h-full rounded-full bg-primary" style={{ width: `${normalized ?? 0}%` }} />
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AlertTriangle, Bot, CheckCircle2, ExternalLink, ListChecks, Percent, Siren, Sparkles } from "lucide-react";
-import { useIncidents, useLogs, useWebhookLogs } from "@/hooks/use-api";
+import { useActivityLogs, useIncidents, useWebhookLogs } from "@/hooks/use-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,9 +16,9 @@ import { formatConfidence, getAIAnalysis, isAIGeneratedIncident } from "@/lib/ai
 export default function DashboardOverviewPage() {
   const incidents = useIncidents();
   const auth = useAuth();
-  const logs = useLogs();
   const canSeeLogs = canViewLogs(auth.profile);
   const webhookLogs = useWebhookLogs(canSeeLogs);
+  const activityLogs = useActivityLogs(canSeeLogs);
   const items = incidents.data ?? [];
   const aiAnalyses = (webhookLogs.data ?? []).map((log) => getAIAnalysis(log)).filter(Boolean);
   const aiCreatedIncidents = items.filter((item) => isAIGeneratedIncident(item));
@@ -45,16 +45,10 @@ export default function DashboardOverviewPage() {
     { label: "Average AI Confidence", value: formatConfidence(averageConfidence), subtitle: "Across analyzed logs", icon: Percent }
   ];
   const timeline = [
-    ...items.slice(0, 4).map((incident) => ({
-      id: `incident-${incident.id}`,
-      action: `${incident.title} moved to ${incident.status.replace(/_/g, " ").toLowerCase()}`,
-      actor: incident.assigned_to ? `User ${incident.assigned_to}` : "Sentinel",
-      time: formatDate(incident.updated_at ?? incident.created_at)
-    })),
-    ...(logs.data ?? []).slice(0, 2).map((log) => ({
-      id: `log-${log.id}`,
-      action: log.message,
-      actor: log.service_name,
+    ...(activityLogs.data ?? []).slice(0, 5).map((log) => ({
+      id: `activity-${log.id}`,
+      action: log.details ?? log.action,
+      actor: log.user_id ? `User ${log.user_id}` : "Sentinel",
       time: formatDate(log.created_at)
     }))
   ].slice(0, 5);
@@ -172,7 +166,7 @@ export default function DashboardOverviewPage() {
             <CardTitle>Activity Timeline</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {incidents.isLoading || logs.isLoading ? (
+            {incidents.isLoading || activityLogs.isLoading ? (
               <Skeleton className="h-44" />
             ) : timeline.length === 0 ? (
               <EmptyState title="No activity yet" description="Incident and log activity will appear here." />
