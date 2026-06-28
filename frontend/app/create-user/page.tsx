@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { api } from "@/services/api";
 import { useRoles, useTeams } from "@/hooks/use-api";
+import { AuthGuard } from "@/components/auth-guard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useAuth } from "@/providers/auth-provider";
+import { isAdmin as isSystemAdmin } from "@/lib/rbac";
 
 const schema = z
   .object({
@@ -38,6 +41,7 @@ type FormValues = z.infer<typeof schema>;
 
 export default function CreateUserPage() {
   const router = useRouter();
+  const auth = useAuth();
   const teams = useTeams();
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -45,13 +49,15 @@ export default function CreateUserPage() {
   });
   const teamId = form.watch("team_id");
   const roles = useRoles(teamId || undefined);
-  const selectedTeam = teams.data?.find((team) => team.id === teamId);
-  const isAdmin = selectedTeam?.name.toLowerCase() === "admin";
   const roleOptions = roles.data ?? [];
 
   useEffect(() => {
-    form.setValue("role_id", isAdmin || roleOptions.length === 0 ? null : form.getValues("role_id"));
-  }, [form, isAdmin, roleOptions.length, teamId]);
+    const currentRoleId = form.getValues("role_id");
+    if (!currentRoleId) return;
+    if (!roleOptions.some((role) => role.id === currentRoleId)) {
+      form.setValue("role_id", null);
+    }
+  }, [form, roleOptions, teamId]);
 
   const mutation = useMutation({
     mutationFn: api.createUser,
@@ -62,11 +68,22 @@ export default function CreateUserPage() {
     onError: (error: Error) => toast.error(error.message || "Unable to create user")
   });
 
-  return (
+  const content = (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="absolute right-6 top-6">
         <ThemeToggle />
       </div>
+      {!isSystemAdmin(auth.profile) ? (
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Admin access required</CardTitle>
+            <CardDescription>Only System Admin users can create accounts.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button className="w-full" onClick={() => router.push("/dashboard")}>Back to Dashboard</Button>
+          </CardContent>
+        </Card>
+      ) : (
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -79,11 +96,11 @@ export default function CreateUserPage() {
           <form
             className="grid gap-4 sm:grid-cols-2"
             onSubmit={form.handleSubmit((values) => {
-              if (!isAdmin && roleOptions.length > 0 && !values.role_id) {
+              if (roleOptions.length > 0 && !values.role_id) {
                 form.setError("role_id", { message: "Role is required" });
                 return;
               }
-              mutation.mutate({ ...values, role_id: isAdmin ? null : values.role_id });
+              mutation.mutate(values);
             })}
           >
             <div className="space-y-2 sm:col-span-2">
@@ -127,35 +144,32 @@ export default function CreateUserPage() {
               )}
               {form.formState.errors.team_id && <p className="text-sm text-destructive">{form.formState.errors.team_id.message}</p>}
             </div>
-            {!isAdmin && (
-              <div className="space-y-2">
-                <Label>Role</Label>
-                <Controller
-                  control={form.control}
-                  name="role_id"
-                  render={({ field }) => (
-                    <Select
-                      disabled={!teamId || roles.isLoading || roleOptions.length === 0}
-                      value={field.value ? String(field.value) : ""}
-                      onValueChange={(value) => field.onChange(Number(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={roles.isLoading ? "Loading roles" : "Select role"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roleOptions.map((role) => (
-                          <SelectItem key={role.id} value={String(role.id)}>
-                            {role.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {form.formState.errors.role_id && <p className="text-sm text-destructive">{form.formState.errors.role_id.message}</p>}
-              </div>
-            )}
-            {isAdmin && <p className="rounded-md border bg-muted p-3 text-sm text-muted-foreground sm:col-span-2">Admin has no role in the backend mapping. The request will submit role_id as null.</p>}
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Controller
+                control={form.control}
+                name="role_id"
+                render={({ field }) => (
+                  <Select
+                    disabled={!teamId || roles.isLoading || roleOptions.length === 0}
+                    value={field.value ? String(field.value) : ""}
+                    onValueChange={(value) => field.onChange(Number(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={!teamId ? "Select team first" : roles.isLoading ? "Loading roles" : "Select role"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roleOptions.map((role) => (
+                        <SelectItem key={role.id} value={String(role.id)}>
+                          {role.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {form.formState.errors.role_id && <p className="text-sm text-destructive">{form.formState.errors.role_id.message}</p>}
+            </div>
             <div className="flex items-center justify-between gap-3 sm:col-span-2">
               <Link className="text-sm text-muted-foreground hover:text-foreground" href="/login">
                 Already have an account?
@@ -167,6 +181,9 @@ export default function CreateUserPage() {
           </form>
         </CardContent>
       </Card>
+      )}
     </main>
   );
+
+  return <AuthGuard>{content}</AuthGuard>;
 }

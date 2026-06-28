@@ -2,10 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/state-views";
 import { IncidentForm } from "@/features/incidents/incident-form";
+import { useAuth } from "@/providers/auth-provider";
+import { canMutateIncidents } from "@/lib/rbac";
 
 export default function NewIncidentPage() {
   const router = useRouter();
+  const auth = useAuth();
+
+  if (!canMutateIncidents(auth.profile)) {
+    return <EmptyState title="View-only access" description="Intern users can view incidents but cannot create them." />;
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

@@ -73,6 +73,54 @@ permission_id INT REFERENCES permissions(id) ON DELETE CASCADE,
 PRIMARY KEY (role_id, permission_id)
 );
 
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+CROSS JOIN permissions p
+WHERE r.role_name = 'System Admin';
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.permission_name IN (
+    'incident:create',
+    'incident:view',
+    'incident:update',
+    'incident:delete',
+    'incident:assign',
+    'incident:resolve',
+    'comment:create',
+    'comment:view',
+    'comment:update',
+    'comment:delete',
+    'log:view'
+)
+WHERE r.role_name = 'Team Lead';
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.permission_name IN (
+    'incident:create',
+    'incident:view',
+    'incident:update',
+    'incident:assign',
+    'incident:resolve',
+    'comment:create',
+    'comment:view',
+    'comment:update'
+)
+WHERE r.role_name IN ('Backend Engineer', 'Frontend Engineer', 'DevOps Engineer', 'Employee');
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.permission_name IN (
+    'incident:view',
+    'comment:view'
+)
+WHERE r.role_name = 'Intern';
+
 
 
 CREATE TABLE users (
@@ -126,4 +174,19 @@ CREATE TABLE webhook_logs (
     message TEXT NOT NULL,
     payload JSONB NOT NULL,
     received_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE ai_analysis (
+    id SERIAL PRIMARY KEY,
+    webhook_log_id INT UNIQUE
+        REFERENCES webhook_logs(id)
+        ON DELETE CASCADE,
+    summary TEXT NOT NULL,
+    severity VARCHAR(20) NOT NULL,
+    root_cause TEXT NOT NULL,
+    recommendations JSONB NOT NULL,
+    confidence FLOAT NOT NULL,
+    should_create_incident BOOLEAN NOT NULL,
+    analyzed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

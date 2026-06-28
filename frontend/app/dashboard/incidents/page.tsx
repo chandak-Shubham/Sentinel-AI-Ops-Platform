@@ -15,10 +15,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/state-views";
 import { SeverityBadge, StatusBadge } from "@/components/status-badges";
 import { formatDate } from "@/lib/utils";
+import { useAuth } from "@/providers/auth-provider";
+import { canMutateIncidents } from "@/lib/rbac";
 
 export default function IncidentsPage() {
   const incidents = useIncidents();
   const teams = useTeams();
+  const auth = useAuth();
   const [search, setSearch] = useState("");
   const [severity, setSeverity] = useState("ALL");
   const [status, setStatus] = useState("ALL");
@@ -48,15 +51,17 @@ export default function IncidentsPage() {
           <h1 className="text-2xl font-semibold">Incidents</h1>
           <p className="text-sm text-muted-foreground">Search, filter, review, and create incident records.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/incidents/new">
-            <Button variant="outline">
-              <Plus className="h-4 w-4" />
-              New Page
-            </Button>
-          </Link>
-          <CreateIncidentDialog />
-        </div>
+        {canMutateIncidents(auth.profile) && (
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/incidents/new">
+              <Button variant="outline">
+                <Plus className="h-4 w-4" />
+                New Page
+              </Button>
+            </Link>
+            <CreateIncidentDialog />
+          </div>
+        )}
       </div>
       <Card>
         <CardContent className="p-4">

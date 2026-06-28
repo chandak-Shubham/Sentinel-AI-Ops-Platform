@@ -9,6 +9,7 @@ import { useIncidentRealtime } from "@/hooks/use-incident-realtime";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
+import { canCreateUsers, canViewLogs } from "@/lib/rbac";
 
 const nav = [
   { href: "/dashboard", label: "Dashboard", icon: Activity },
@@ -26,6 +27,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   useIncidentRealtime();
+  const visibleNav = nav.filter((item) => {
+    if (item.href === "/dashboard/users") return canCreateUsers(auth.profile);
+    if (item.href === "/dashboard/activity-logs" || item.href === "/dashboard/webhook-logs") return canViewLogs(auth.profile);
+    return true;
+  });
 
   const sidebar = (
     <aside className={cn("flex h-full flex-col border-r bg-card transition-all", collapsed ? "w-20" : "w-72")}>
@@ -44,7 +50,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </Button>
       </div>
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {nav.map((item) => {
+        {visibleNav.map((item) => {
           const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
           const Icon = item.icon;
           return (

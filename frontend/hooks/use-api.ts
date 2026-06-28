@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services/api";
+import { activityService } from "@/services/activity.service";
 import { incidentService } from "@/services/incident.service";
 import { webhookService } from "@/services/webhookService";
 
@@ -39,8 +40,12 @@ export function useLogs() {
   return useQuery({ queryKey: ["logs"], queryFn: api.logs });
 }
 
-export function useWebhookLogs() {
-  return useQuery({ queryKey: ["webhook-logs"], queryFn: webhookService.getWebhookLogs });
+export function useActivityLogs(enabled = true) {
+  return useQuery({ queryKey: ["activity-logs"], queryFn: activityService.list, enabled });
+}
+
+export function useWebhookLogs(enabled = true) {
+  return useQuery({ queryKey: ["webhook-logs"], queryFn: webhookService.getWebhookLogs, enabled });
 }
 
 export function useWebhookLog(id?: number) {

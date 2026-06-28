@@ -47,6 +47,10 @@ export interface Incident {
   created_at?: string | null;
   updated_at?: string | null;
   resolved_at?: string | null;
+  ai_summary?: string | null;
+  ai_root_cause?: string | null;
+  ai_recommendations?: string[] | null;
+  ai_confidence?: number | null;
 }
 
 export interface IncidentTimelineEntry {
@@ -113,11 +117,35 @@ export interface WebhookLog {
   message: string;
   payload: unknown;
   received_at: string | null;
+  analysis?: AIAnalysis | null;
+  ai_analysis?: AIAnalysis | null;
+}
+
+export interface AIAnalysis {
+  id: number;
+  webhook_log_id: number;
+  summary: string;
+  severity: Severity;
+  root_cause: string;
+  recommendations: string[];
+  confidence: number;
+  should_create_incident: boolean;
+  analyzed_at?: string | null;
 }
 
 export interface JwtProfile {
   user_id?: number;
   email?: string;
   role?: string;
+  team_id?: number;
   exp?: number;
+}
+
+export interface ActivityLog {
+  id: number;
+  action: string;
+  user_id?: number | null;
+  incident_id?: number | null;
+  details?: string | null;
+  created_at?: string | null;
 }

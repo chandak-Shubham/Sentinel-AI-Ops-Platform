@@ -2,6 +2,7 @@ import type {
   CreateIncidentPayload,
   CreateUserPayload,
   CreateUserResponse,
+  ActivityLog,
   Incident,
   IncidentTimelineEntry,
   LogEntry,
@@ -99,5 +100,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
-  logs: () => apiRequest<LogEntry[]>("/logs/")
+  logs: () => apiRequest<LogEntry[]>("/logs/"),
+  activityLogs: () => apiRequest<ActivityLog[]>("/activity-logs/")
 };

@@ -1,6 +1,12 @@
 # Python virtual environment
 sentinel_env/
 
+# Python cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
 # Environment files
 *.env
 *.env.local

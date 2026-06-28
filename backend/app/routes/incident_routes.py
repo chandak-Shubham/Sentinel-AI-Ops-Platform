@@ -41,7 +41,7 @@ def get_all_incidents(
     current_user=Depends(get_current_user)
 ):
 
-    return incident_service.get_all_incidents(db)
+    return incident_service.get_all_incidents(db, current_user)
 
 
 @router.get(
@@ -56,7 +56,8 @@ def get_incident(
 
     incident = incident_service.get_incident_by_id(
         incident_id,
-        db
+        db,
+        current_user
     )
 
     if incident is None:
@@ -81,7 +82,8 @@ def update_incident(
 
     incident = incident_service.get_incident_by_id(
         incident_id,
-        db
+        db,
+        current_user
     )
 
     if incident is None:
@@ -110,7 +112,8 @@ def resolve_incident(
 
     incident = incident_service.get_incident_by_id(
         incident_id,
-        db
+        db,
+        current_user
     )
 
     if incident is None:
@@ -135,7 +138,8 @@ def delete_incident(
 
     incident = incident_service.get_incident_by_id(
         incident_id,
-        db
+        db,
+        current_user
     )
 
     if incident is None:

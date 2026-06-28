@@ -2,10 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.utils.dependencies import get_current_user
+from app.utils.permission import can_view_logs, deny
 
 from app.schemas.webhook_schema import (
     WebhookLogCreate,
-    WebhookLogResponse
+    WebhookLogResponse,
+    WebhookPipelineResponse
 )
 
 from app.services import webhook_service
@@ -17,7 +20,7 @@ router = APIRouter(
 
 @router.post(
     "/logs",
-    response_model=WebhookLogResponse
+    response_model=WebhookPipelineResponse
 )
 def receive_webhook(
     data: WebhookLogCreate,
@@ -34,8 +37,11 @@ def receive_webhook(
     response_model=list[WebhookLogResponse]
 )
 def get_all_logs(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
+    if not can_view_logs(current_user):
+        deny("You do not have permission to view webhook logs")
 
     return webhook_service.get_all_webhook_logs(
         db
@@ -47,8 +53,11 @@ def get_all_logs(
 )
 def get_log(
     webhook_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
 ):
+    if not can_view_logs(current_user):
+        deny("You do not have permission to view webhook logs")
 
     webhook = webhook_service.get_webhook_log_by_id(
         webhook_id,

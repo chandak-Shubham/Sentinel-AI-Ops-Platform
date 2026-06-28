@@ -56,3 +56,21 @@ def get_current_user(
         )
 
     return user
+
+
+def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials = Security(bearer_scheme),
+    db: Session = Depends(get_db)
+):
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        return None
+
+    payload = verify_token(credentials.credentials)
+    if payload is None:
+        return None
+
+    return (
+        db.query(User)
+        .filter(User.id == payload["user_id"])
+        .first()
+    )

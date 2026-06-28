@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Clock, ExternalLink, ListChecks, Siren } from "lucide-react";
+import { AlertTriangle, Bot, CheckCircle2, ExternalLink, ListChecks, Percent, Siren, Sparkles } from "lucide-react";
 import { useIncidents, useLogs, useWebhookLogs } from "@/hooks/use-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,12 +9,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/state-views";
 import { SeverityBadge, StatusBadge, LogLevelBadge } from "@/components/status-badges";
 import { formatDate } from "@/lib/utils";
+import { useAuth } from "@/providers/auth-provider";
+import { canViewLogs } from "@/lib/rbac";
+import { formatConfidence, getAIAnalysis, isAIGeneratedIncident } from "@/lib/ai";
 
 export default function DashboardOverviewPage() {
   const incidents = useIncidents();
+  const auth = useAuth();
   const logs = useLogs();
-  const webhookLogs = useWebhookLogs();
+  const canSeeLogs = canViewLogs(auth.profile);
+  const webhookLogs = useWebhookLogs(canSeeLogs);
   const items = incidents.data ?? [];
+  const aiAnalyses = (webhookLogs.data ?? []).map((log) => getAIAnalysis(log)).filter(Boolean);
+  const aiCreatedIncidents = items.filter((item) => isAIGeneratedIncident(item));
+  const averageConfidence =
+    aiAnalyses.length > 0
+      ? aiAnalyses.reduce((total, analysis) => total + (analysis?.confidence ?? 0), 0) / aiAnalyses.length
+      : null;
   const today = new Date().toDateString();
   const stats = [
     { label: "Total Incidents", subtitle: "All tracked cases", value: items.length, icon: ListChecks },
@@ -26,6 +37,12 @@ export default function DashboardOverviewPage() {
       value: items.filter((item) => item.resolved_at && new Date(item.resolved_at).toDateString() === today).length,
       icon: CheckCircle2
     }
+  ];
+  const aiStats = [
+    { label: "Total AI Analyses", value: aiAnalyses.length, subtitle: "Webhook evaluations", icon: Bot },
+    { label: "AI Created Incidents", value: aiCreatedIncidents.length, subtitle: "Generated from webhooks", icon: Sparkles },
+    { label: "Critical AI Detections", value: aiAnalyses.filter((analysis) => analysis?.severity === "CRITICAL").length, subtitle: "Highest risk signals", icon: Siren },
+    { label: "Average AI Confidence", value: formatConfidence(averageConfidence), subtitle: "Across analyzed logs", icon: Percent }
   ];
   const timeline = [
     ...items.slice(0, 4).map((incident) => ({
@@ -71,6 +88,39 @@ export default function DashboardOverviewPage() {
           );
         })}
       </div>
+      {canSeeLogs && (
+        <Card className="border-primary/30 bg-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-primary" />
+              AI Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {webhookLogs.isLoading ? (
+              <Skeleton className="h-28" />
+            ) : webhookLogs.isError ? (
+              <ErrorState message="Unable to load AI analysis summary." />
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {aiStats.map((stat) => {
+                  const Icon = stat.icon;
+                  return (
+                    <div key={stat.label} className="rounded-md border bg-background p-4 transition-colors hover:border-primary/50">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm text-muted-foreground">{stat.label}</p>
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <p className="mt-3 text-2xl font-semibold">{stat.value}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{stat.subtitle}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
         <Card>
           <CardHeader>
@@ -143,7 +193,7 @@ export default function DashboardOverviewPage() {
           </CardContent>
         </Card>
       </div>
-      <Card>
+      {canSeeLogs && <Card>
         <CardHeader>
           <CardTitle>Recent Webhook Logs</CardTitle>
         </CardHeader>
@@ -179,7 +229,7 @@ export default function DashboardOverviewPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card>}
     </div>
   );
 }

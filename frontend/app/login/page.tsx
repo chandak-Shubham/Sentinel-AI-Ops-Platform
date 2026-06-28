@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -70,12 +69,6 @@ export default function LoginPage() {
               {mutation.isPending ? "Signing in..." : "Login"}
             </Button>
           </form>
-          <p className="mt-5 text-center text-sm text-muted-foreground">
-            New here?{" "}
-            <Link className="font-medium text-primary" href="/create-user">
-              Create user
-            </Link>
-          </p>
         </CardContent>
       </Card>
     </main>

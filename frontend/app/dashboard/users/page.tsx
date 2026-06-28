@@ -5,6 +5,7 @@ import { Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useAuth } from "@/providers/auth-provider";
 import { useTeams } from "@/hooks/use-api";
+import { isAdmin } from "@/lib/rbac";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +31,10 @@ export default function UsersPage() {
       : [];
     return currentUser.filter((user) => `${user.name} ${user.email} ${user.role}`.toLowerCase().includes(search.toLowerCase()));
   }, [auth.profile, search]);
+
+  if (!isAdmin(auth.profile)) {
+    return <EmptyState title="Admin access required" description="Only System Admin users can manage user accounts." />;
+  }
 
   return (
     <div className="space-y-6">

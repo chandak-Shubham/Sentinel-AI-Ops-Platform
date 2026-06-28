@@ -3,18 +3,17 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
-import { useLogs } from "@/hooks/use-api";
+import { useActivityLogs } from "@/hooks/use-api";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/state-views";
-import { LogLevelBadge } from "@/components/status-badges";
 import { formatDate } from "@/lib/utils";
 
 export default function ActivityLogsPage() {
-  const logs = useLogs();
+  const logs = useActivityLogs();
   const [search, setSearch] = useState("");
   const [action, setAction] = useState("ALL");
   const [date, setDate] = useState("");
@@ -22,12 +21,12 @@ export default function ActivityLogsPage() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  const actionOptions = useMemo(() => ["ALL", ...Array.from(new Set((logs.data ?? []).map((log) => log.event_type)))], [logs.data]);
+  const actionOptions = useMemo(() => ["ALL", ...Array.from(new Set((logs.data ?? []).map((log) => log.action)))], [logs.data]);
   const filtered = useMemo(() => {
     return (logs.data ?? []).filter((log) => {
-      const haystack = `${log.event_type} ${log.service_name} ${log.message} ${log.incident_id ?? ""}`.toLowerCase();
+      const haystack = `${log.action} ${log.details ?? ""} ${log.user_id ?? ""} ${log.incident_id ?? ""}`.toLowerCase();
       const matchesSearch = haystack.includes(search.toLowerCase());
-      const matchesAction = action === "ALL" || log.event_type === action;
+      const matchesAction = action === "ALL" || log.action === action;
       const matchesDate = !date || (log.created_at ?? "").startsWith(date);
       const matchesIncident = !incident || String(log.incident_id ?? "").includes(incident);
       return matchesSearch && matchesAction && matchesDate && matchesIncident;
@@ -72,17 +71,17 @@ export default function ActivityLogsPage() {
                   <TableHead>Action</TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Incident</TableHead>
-                  <TableHead>Level</TableHead>
+                  <TableHead>Details</TableHead>
                   <TableHead>Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginated.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="font-medium">{log.event_type}</TableCell>
-                    <TableCell>{log.service_name}</TableCell>
+                    <TableCell className="font-medium">{log.action}</TableCell>
+                    <TableCell>{log.user_id ? `User ${log.user_id}` : "System"}</TableCell>
                     <TableCell>{log.incident_id ? `#${log.incident_id}` : "Not linked"}</TableCell>
-                    <TableCell><LogLevelBadge value={log.log_level} /></TableCell>
+                    <TableCell className="max-w-md truncate">{log.details ?? "No details"}</TableCell>
                     <TableCell>{formatDate(log.created_at)}</TableCell>
                   </TableRow>
                 ))}

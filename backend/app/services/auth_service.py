@@ -58,10 +58,16 @@ def create_user(
     if not team:
         return None
 
-    role = db.query(Role).filter(
-        Role.id == role_id,
-        Role.team_id == team_id
-    ).first()
+    if role_id is None and team.team_name.lower() == "admin":
+        role = db.query(Role).filter(
+            Role.role_name == "System Admin",
+            Role.team_id == team_id
+        ).first()
+    else:
+        role = db.query(Role).filter(
+            Role.id == role_id,
+            Role.team_id == team_id
+        ).first()
 
     if not role:
         return None
@@ -72,7 +78,7 @@ def create_user(
         full_name=full_name,
         email=email,
         password_hash=hashed_password,
-        role_id=role_id,
+        role_id=role.id,
         team_id=team_id
     )
 
