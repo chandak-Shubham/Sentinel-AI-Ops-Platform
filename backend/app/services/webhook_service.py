@@ -5,6 +5,8 @@ from app.models.webhook_log import WebhookLog
 from app.utils.activity_logger import log_activity
 from app.services.ai_analysis_service import analyze_webhook
 from app.services.incident_generator import generate_incident
+from app.websocket.manager import manager
+
 
 
 def _get_webhook_team_id(data, db: Session):
@@ -47,7 +49,7 @@ def _create_incident_for_webhook_error(data, webhook, db: Session):
     return incident
 
 
-def create_webhook_log(
+async def create_webhook_log(
     data,
     db: Session
 ):
@@ -62,12 +64,22 @@ def create_webhook_log(
     db.commit()
     db.refresh(webhook)
 
+    await manager.broadcast(
+    "webhook_received",
+    {
+        "id": webhook.id,
+        "service": webhook.service,
+        "level": webhook.level,
+        "message": webhook.message
+    }
+)
+
     analysis = analyze_webhook(
         webhook,
         db
     )
 
-    incident = generate_incident(
+    incident = await generate_incident(
         webhook,
         analysis,
         db

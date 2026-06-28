@@ -51,6 +51,10 @@ export interface Incident {
   ai_root_cause?: string | null;
   ai_recommendations?: string[] | null;
   ai_confidence?: number | null;
+  ai_decision?: string | null;
+  rule_engine_validation?: string | null;
+  rule_engine_status?: string | null;
+  validation_status?: string | null;
 }
 
 export interface IncidentTimelineEntry {
@@ -76,6 +80,7 @@ export interface UpdateIncidentPayload {
 }
 
 export type IncidentRealtimeEvent =
+  | SentinelRealtimeEvent
   | {
       event: "incident_created";
       incident_id: number;
@@ -89,6 +94,32 @@ export type IncidentRealtimeEvent =
       incident_id: number;
       old_status?: IncidentStatus;
       new_status?: IncidentStatus;
+    };
+
+export type RealtimeConnectionStatus = "connected" | "disconnected" | "reconnecting";
+
+export type SentinelRealtimeEvent =
+  | {
+      type: "webhook_received";
+      timestamp?: string | null;
+      data: {
+        id: number;
+        service: string;
+        level: LogLevel;
+        message: string;
+        payload?: unknown;
+        received_at?: string | null;
+      };
+    }
+  | {
+      type: "incident_created";
+      timestamp?: string | null;
+      data: Incident;
+    }
+  | {
+      type: "activity_created";
+      timestamp?: string | null;
+      data: ActivityLog;
     };
 
 export interface CreateIncidentPayload {
@@ -131,6 +162,10 @@ export interface AIAnalysis {
   confidence: number;
   should_create_incident: boolean;
   analyzed_at?: string | null;
+  ai_decision?: string | null;
+  rule_engine_validation?: string | null;
+  rule_engine_status?: string | null;
+  validation_status?: string | null;
 }
 
 export interface JwtProfile {
