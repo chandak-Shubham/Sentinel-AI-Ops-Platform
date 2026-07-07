@@ -5,10 +5,12 @@ from app.core.database import get_db
 from app.schemas.incident_schema import (
     IncidentCreate,
     IncidentUpdate,
-    IncidentResponse
+    IncidentResponse,
+    IncidentTimelineResponse
 )
 from app.services import incident_service
 from app.utils.dependencies import get_current_user
+from app.models.activity_log import ActivityLog
 
 router = APIRouter(
     prefix="/incidents",
@@ -159,3 +161,43 @@ def delete_incident(
     }
 
 
+@router.get(
+    "/{incident_id}/timeline",
+    response_model=list[IncidentTimelineResponse]
+)
+def get_incident_timeline(
+    incident_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+
+    incident = incident_service.get_incident_by_id(
+        incident_id,
+        db,
+        current_user
+    )
+
+    if incident is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Incident not found"
+        )
+
+    logs = (
+        db.query(ActivityLog)
+        .filter(ActivityLog.incident_id == incident_id)
+        .order_by(ActivityLog.created_at.desc())
+        .all()
+    )
+
+    return [
+        IncidentTimelineResponse(
+            id=log.id,
+            incident_id=log.incident_id,
+            action_type=log.action,
+            message=log.details,
+            performed_by=log.user_id,
+            created_at=log.created_at
+        )
+        for log in logs
+    ]

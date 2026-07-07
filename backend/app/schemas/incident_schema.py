@@ -37,3 +37,15 @@ class IncidentResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class IncidentTimelineResponse(BaseModel):
+    id: int
+    incident_id: int
+    action_type: str
+    message: Optional[str] = None
+    performed_by: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

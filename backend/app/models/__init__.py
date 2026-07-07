@@ -6,3 +6,4 @@ from app.models.role_permission import RolePermission
 from app.models.incident import Incident
 from app.models.activity_log import ActivityLog
 from app.models.webhook_log import WebhookLog
+from app.models.ai_analysis import AIAnalysis

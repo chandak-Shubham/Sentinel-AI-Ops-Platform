@@ -68,12 +68,14 @@ export default function CreateUserPage() {
     onError: (error: Error) => toast.error(error.message || "Unable to create user")
   });
 
+  const isAllowed = !auth.isAuthenticated || isSystemAdmin(auth.profile);
+
   const content = (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="absolute right-6 top-6">
         <ThemeToggle />
       </div>
-      {!isSystemAdmin(auth.profile) ? (
+      {!isAllowed ? (
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Admin access required</CardTitle>
@@ -185,5 +187,5 @@ export default function CreateUserPage() {
     </main>
   );
 
-  return <AuthGuard>{content}</AuthGuard>;
+  return content;
 }

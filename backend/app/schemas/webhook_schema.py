@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel
 from app.schemas.ai_analysis_schema import AIAnalysisResponse
@@ -20,6 +20,7 @@ class WebhookLogResponse(BaseModel):
     message: str
     payload: dict[str, Any]
     received_at: datetime
+    ai_analysis: Optional[AIAnalysisResponse] = None
 
     class Config:
         from_attributes = True
