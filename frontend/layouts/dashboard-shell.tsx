@@ -57,15 +57,15 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               className={cn(
-                "flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                "flex h-10 items-center gap-3 rounded-lg px-3.5 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-secondary/70 hover:text-foreground relative group",
                 collapsed && "justify-center px-0",
-                active && "bg-primary/12 text-primary"
+                active && "bg-primary/10 text-primary font-semibold border-l-2 border-primary rounded-l-none"
               )}
               href={item.href}
               title={collapsed ? item.label : undefined}
               onClick={() => setOpen(false)}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 transition-transform duration-200 group-hover:scale-110" />
               {!collapsed && item.label}
             </Link>
           );
@@ -125,9 +125,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-xs font-medium text-muted-foreground">
-              <span aria-hidden="true">{realtimeStatus === "connected" ? "🟢" : realtimeStatus === "reconnecting" ? "🟡" : "🔴"}</span>
-              <span className="capitalize">{realtimeStatus}</span>
+            <div className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-3 py-1.5 text-[11px] font-semibold text-muted-foreground shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className={cn(
+                  "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+                  realtimeStatus === "connected" ? "bg-emerald-400" : realtimeStatus === "reconnecting" ? "bg-amber-400" : "bg-red-400"
+                )}></span>
+                <span className={cn(
+                  "relative inline-flex rounded-full h-2 w-2",
+                  realtimeStatus === "connected" ? "bg-emerald-500" : realtimeStatus === "reconnecting" ? "bg-amber-500" : "bg-red-500"
+                )}></span>
+              </span>
+              <span className="capitalize tracking-wider text-[10px]">{realtimeStatus}</span>
             </div>
             <Button variant="outline" size="icon" title="Notifications">
               <Bell className="h-4 w-4" />

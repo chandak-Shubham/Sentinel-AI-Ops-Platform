@@ -111,7 +111,7 @@ export default function IncidentDetailsPage() {
           </CardContent>
         </Card>
         {hasAIAnalysis && (
-          <Card className="border-primary/30 lg:col-start-1">
+          <Card className="ai-glow-card glass-card lg:col-start-1">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bot className="h-5 w-5 text-primary" />
@@ -284,22 +284,25 @@ export default function IncidentDetailsPage() {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border p-3">
-      <p className="text-xs font-semibold uppercase text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm">{value}</p>
+    <div className="rounded-xl border border-border/70 p-4 bg-secondary/10 hover:bg-secondary/20 transition-all duration-200">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-1.5 text-sm font-semibold">{value}</p>
     </div>
   );
 }
 
 function ConfidenceMeter({ value }: { value?: number | null }) {
-  const normalized = normalizeConfidence(value);
+  const normalized = normalizeConfidence(value) ?? 0;
+  const barColor = normalized >= 85 ? "from-emerald-500 to-teal-400" : normalized >= 70 ? "from-amber-500 to-orange-400" : "from-red-500 to-rose-400";
 
   return (
-    <div className="rounded-md border p-3">
-      <p className="text-xs font-semibold uppercase text-muted-foreground">AI Confidence</p>
-      <p className="mt-1 text-sm">{formatConfidence(value)}</p>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${normalized ?? 0}%` }} />
+    <div className="rounded-xl border border-border/70 p-4 bg-secondary/5">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">AI Pipeline Confidence</p>
+        <p className="text-sm font-bold text-primary">{formatConfidence(value)}</p>
+      </div>
+      <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-muted shadow-inner relative">
+        <div className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-500`} style={{ width: `${normalized}%` }} />
       </div>
     </div>
   );
@@ -307,9 +310,9 @@ function ConfidenceMeter({ value }: { value?: number | null }) {
 
 function AnalysisInfo({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border p-4">
-      <p className="text-sm font-semibold">{label}</p>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{value}</p>
+    <div className="rounded-xl border border-border/70 p-5 bg-card hover:bg-secondary/10 transition-all duration-200">
+      <p className="text-sm font-bold text-foreground">{label}</p>
+      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{value}</p>
     </div>
   );
 }

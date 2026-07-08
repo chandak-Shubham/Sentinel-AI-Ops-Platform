@@ -1,17 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Bot, CheckCircle2, ExternalLink, ListChecks, Percent, Siren, Sparkles } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useActivityLogs, useIncidents, useWebhookLogs } from "@/hooks/use-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState, ErrorState } from "@/components/state-views";
-import { SeverityBadge, StatusBadge, LogLevelBadge } from "@/components/status-badges";
+import { ErrorState } from "@/components/state-views";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/providers/auth-provider";
 import { canViewLogs } from "@/lib/rbac";
 import { formatConfidence, getAIAnalysis, isAIGeneratedIncident } from "@/lib/ai";
+
+// Modular Dashboard Sub-components
+import { DashboardStats } from "@/components/dashboard/stats";
+import { IncidentTrendChart } from "@/components/dashboard/trend-chart";
+import { SeverityDistributionChart } from "@/components/dashboard/distribution-chart";
+import { RecentIncidentsTable } from "@/components/dashboard/incidents-table";
+import { ActivityTimeline } from "@/components/dashboard/timeline";
+import { AIInsightsPanel } from "@/components/dashboard/ai-panel";
+import { WebhookLogsTable } from "@/components/dashboard/webhook-table";
 
 export default function DashboardOverviewPage() {
   const incidents = useIncidents();
@@ -19,6 +26,7 @@ export default function DashboardOverviewPage() {
   const canSeeLogs = canViewLogs(auth.profile);
   const webhookLogs = useWebhookLogs(canSeeLogs);
   const activityLogs = useActivityLogs(canSeeLogs);
+
   const items = incidents.data ?? [];
   const aiAnalyses = (webhookLogs.data ?? []).map((log) => getAIAnalysis(log)).filter(Boolean);
   const aiCreatedIncidents = items.filter((item) => isAIGeneratedIncident(item));
@@ -26,204 +34,104 @@ export default function DashboardOverviewPage() {
     aiAnalyses.length > 0
       ? aiAnalyses.reduce((total, analysis) => total + (analysis?.confidence ?? 0), 0) / aiAnalyses.length
       : null;
+
   const today = new Date().toDateString();
-  const stats = [
-    { label: "Total Incidents", subtitle: "All tracked cases", value: items.length, icon: ListChecks },
-    { label: "Open Incidents", subtitle: "Need triage", value: items.filter((item) => item.status === "OPEN").length, icon: AlertTriangle },
-    { label: "Critical Incidents", subtitle: "Highest severity", value: items.filter((item) => item.severity === "CRITICAL").length, icon: Siren },
-    {
-      label: "Resolved Today",
-      subtitle: "Closed this cycle",
-      value: items.filter((item) => item.resolved_at && new Date(item.resolved_at).toDateString() === today).length,
-      icon: CheckCircle2
-    }
-  ];
-  const aiStats = [
-    { label: "Total AI Analyses", value: aiAnalyses.length, subtitle: "Webhook evaluations", icon: Bot },
-    { label: "AI Created Incidents", value: aiCreatedIncidents.length, subtitle: "Generated from webhooks", icon: Sparkles },
-    { label: "Critical AI Detections", value: aiAnalyses.filter((analysis) => analysis?.severity === "CRITICAL").length, subtitle: "Highest risk signals", icon: Siren },
-    { label: "Average AI Confidence", value: formatConfidence(averageConfidence), subtitle: "Across analyzed logs", icon: Percent }
-  ];
-  const timeline = [
-    ...(activityLogs.data ?? []).slice(0, 5).map((log) => ({
-      id: `activity-${log.id}`,
-      action: log.details ?? log.action,
-      actor: log.user_id ? `User ${log.user_id}` : "Sentinel",
-      time: formatDate(log.created_at)
-    }))
-  ].slice(0, 5);
+
+  const timeline = (activityLogs.data ?? []).slice(0, 5).map((log) => ({
+    id: `activity-${log.id}`,
+    action: log.details ?? log.action,
+    actor: log.user_id ? `User ${log.user_id}` : "Sentinel",
+    time: formatDate(log.created_at)
+  }));
 
   return (
     <div className="space-y-6">
+      {/* 1. Header Area */}
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Live operational summary for incident response teams.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">AI Operations Center</h1>
+          <p className="text-sm text-muted-foreground">Real-time incident intelligence and service telemetry.</p>
         </div>
-        <Link className="text-sm font-medium text-primary hover:text-primary/80" href="/dashboard/incidents">
-          View all incidents
+        <Link
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 transition-colors"
+          href="/dashboard/incidents"
+        >
+          View all incidents <ExternalLink className="h-3.5 w-3.5" />
         </Link>
       </div>
-      {incidents.isError && <ErrorState message="Unable to load incident summary." />}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label} className="transition-transform hover:-translate-y-0.5 hover:border-primary/40">
-              <CardContent className="flex items-center justify-between p-5">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="mt-2 text-3xl font-semibold">{incidents.isLoading ? "..." : stat.value}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{stat.subtitle}</p>
-                </div>
-                <Icon className="h-6 w-6 text-primary" />
-              </CardContent>
-            </Card>
-          );
-        })}
+
+      {incidents.isError && <ErrorState message="Unable to load incident operations metrics." />}
+
+      {/* 2. Top Summary KPI Cards (Single Row) */}
+      <DashboardStats
+        isLoading={incidents.isLoading}
+        total={items.length}
+        open={items.filter((item) => item.status === "OPEN").length}
+        critical={items.filter((item) => item.severity === "CRITICAL").length}
+        resolved={items.filter((item) => item.resolved_at && new Date(item.resolved_at).toDateString() === today).length}
+      />
+
+      {/* 3. AI Operational Insights (Visual Charts Grid) */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {incidents.isLoading ? (
+          <Skeleton className="h-[200px]" />
+        ) : (
+          <IncidentTrendChart data={items} />
+        )}
+        {incidents.isLoading ? (
+          <Skeleton className="h-[200px]" />
+        ) : (
+          <SeverityDistributionChart data={items} />
+        )}
       </div>
-      {canSeeLogs && (
-        <Card className="border-primary/30 bg-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bot className="h-5 w-5 text-primary" />
-              AI Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {webhookLogs.isLoading ? (
-              <Skeleton className="h-28" />
-            ) : webhookLogs.isError ? (
-              <ErrorState message="Unable to load AI analysis summary." />
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {aiStats.map((stat) => {
-                  const Icon = stat.icon;
-                  return (
-                    <div key={stat.label} className="rounded-md border bg-background p-4 transition-colors hover:border-primary/50">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm text-muted-foreground">{stat.label}</p>
-                        <Icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <p className="mt-3 text-2xl font-semibold">{stat.value}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{stat.subtitle}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+
+      {/* 4. Main Operations Section */}
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Incidents</CardTitle>
+        <Card className="hover:border-primary/20 duration-300">
+          <CardHeader className="flex flex-row items-center justify-between border-b pb-3 space-y-0">
+            <CardTitle className="text-base font-bold">Recent Incidents</CardTitle>
+            <Link className="text-xs font-semibold text-primary hover:underline" href="/dashboard/incidents">
+              View all
+            </Link>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             {incidents.isLoading ? (
               <Skeleton className="h-44" />
-            ) : items.length === 0 ? (
-              <EmptyState title="No incidents" description="Incidents created through the backend will appear here." />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Severity</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.slice(0, 6).map((incident) => (
-                    <TableRow key={incident.id}>
-                      <TableCell>
-                        <Link className="font-medium text-primary" href={`/dashboard/incidents/${incident.id}`}>
-                          {incident.title}
-                        </Link>
-                      </TableCell>
-                      <TableCell><SeverityBadge value={incident.severity} /></TableCell>
-                      <TableCell><StatusBadge value={incident.status} /></TableCell>
-                      <TableCell>{incident.assigned_to ? `User ${incident.assigned_to}` : "Unassigned"}</TableCell>
-                      <TableCell>{formatDate(incident.created_at)}</TableCell>
-                      <TableCell>
-                        <Link className="inline-flex items-center gap-1 text-sm text-primary" href={`/dashboard/incidents/${incident.id}`}>
-                          Open <ExternalLink className="h-3 w-3" />
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <RecentIncidentsTable items={items} />
             )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Activity Timeline</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {incidents.isLoading || activityLogs.isLoading ? (
-              <Skeleton className="h-44" />
-            ) : timeline.length === 0 ? (
-              <EmptyState title="No activity yet" description="Incident and log activity will appear here." />
-            ) : (
-              timeline.map((entry) => (
-                <div key={entry.id} className="relative flex gap-3 border-l pl-4">
-                  <span className="absolute -left-1.5 top-1 h-3 w-3 rounded-full bg-primary" />
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">
-                    {entry.actor.slice(0, 2).toUpperCase()}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="line-clamp-2 text-sm font-medium">{entry.action}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{entry.actor} | {entry.time}</p>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+
+        {activityLogs.isLoading ? (
+          <Skeleton className="h-64" />
+        ) : (
+          <ActivityTimeline timeline={timeline} />
+        )}
       </div>
-      {canSeeLogs && <Card>
-        <CardHeader>
-          <CardTitle>Recent Webhook Logs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {webhookLogs.isLoading ? (
-            <Skeleton className="h-44" />
-          ) : webhookLogs.isError ? (
-            <ErrorState message="Unable to load webhook logs." />
-          ) : (webhookLogs.data ?? []).length === 0 ? (
-            <EmptyState title="No webhook logs" description="Webhook log records will appear here as integrations are connected." />
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Service</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>Message</TableHead>
-                    <TableHead>Received Time</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(webhookLogs.data ?? []).slice(0, 6).map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell>{log.service}</TableCell>
-                      <TableCell><LogLevelBadge value={log.level} /></TableCell>
-                      <TableCell className="max-w-xs truncate">{log.message}</TableCell>
-                      <TableCell>{formatDate(log.received_at)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>}
+
+      {/* 5. AI Operations Insights Detail Panel */}
+      {canSeeLogs && (
+        webhookLogs.isLoading ? (
+          <Skeleton className="h-[220px]" />
+        ) : (
+          <AIInsightsPanel
+            averageConfidence={formatConfidence(averageConfidence)}
+            criticalDetections={aiAnalyses.filter((analysis) => analysis?.severity === "CRITICAL").length}
+            generatedIncidents={aiCreatedIncidents.length}
+            latestAnalysis={aiAnalyses.length > 0 ? aiAnalyses[0] : null}
+          />
+        )
+      )}
+
+      {/* 6. Recent Webhook Log Stream */}
+      {canSeeLogs && (
+        webhookLogs.isLoading ? (
+          <Skeleton className="h-[180px]" />
+        ) : (
+          <WebhookLogsTable logs={webhookLogs.data ?? []} />
+        )
+      )}
     </div>
   );
 }
