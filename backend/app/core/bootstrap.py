@@ -12,12 +12,17 @@ logger = logging.getLogger(__name__)
 def create_default_admin():
     db: Session = SessionLocal()
     try:
-        user_count = db.query(User).count()
-        if user_count > 0:
-            logger.info("Users already exist. Skipping default admin creation.")
+        existing_admin = (
+            db.query(User)
+            .filter(User.email == DEFAULT_ADMIN_EMAIL)
+            .first()
+        )
+
+        if existing_admin:
+            logger.info("Default admin already exists. Skipping bootstrap.")
             return
 
-        logger.info("No users found. Creating default System Admin.")
+        logger.info("Default admin not found. Creating default System Admin.")
         
         team = db.query(Team).filter(Team.team_name == "Admin").first()
         role = db.query(Role).filter(Role.role_name == "System Admin").first()
