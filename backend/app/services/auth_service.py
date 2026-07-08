@@ -87,3 +87,50 @@ def create_user(
     db.refresh(new_user)
 
     return new_user
+
+
+def get_or_create_demo_user(db: Session):
+    email = "demo@sentinel.ai"
+    user = db.query(User).filter(User.email == email).first()
+    if user:
+        return user
+
+    # Create dummy Demo team
+    team = db.query(Team).filter(Team.team_name == "Demo").first()
+    if not team:
+        team = Team(
+            team_name="Demo",
+            description="Demo Team"
+        )
+        db.add(team)
+        db.commit()
+        db.refresh(team)
+
+    # Create System Admin role for the team
+    role = db.query(Role).filter(
+        Role.role_name == "System Admin",
+        Role.team_id == team.id
+    ).first()
+    if not role:
+        role = Role(
+            role_name="System Admin",
+            team_id=team.id
+        )
+        db.add(role)
+        db.commit()
+        db.refresh(role)
+
+    # Create Demo user
+    hashed_password = hash_password("demo_password_123")
+    demo_user = User(
+        full_name="Demo User",
+        email=email,
+        password_hash=hashed_password,
+        role_id=role.id,
+        team_id=team.id
+    )
+    db.add(demo_user)
+    db.commit()
+    db.refresh(demo_user)
+
+    return demo_user

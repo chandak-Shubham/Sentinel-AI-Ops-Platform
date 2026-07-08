@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from datetime import timedelta
 
 from app.core.database import get_db
 from app.schemas.auth_schema import (
@@ -9,8 +10,10 @@ from app.schemas.auth_schema import (
 )
 from app.services.auth_service import (
     login_user,
-    create_user
+    create_user,
+    get_or_create_demo_user
 )
+from app.utils.jwt import create_access_token
 from app.utils.dependencies import get_optional_current_user
 from app.models.user import User
 from app.models.role import Role
@@ -44,6 +47,29 @@ def login(
         "access_token": token,
         "token_type": "bearer"
     }
+
+
+@router.post("/demo-login", response_model=TokenResponse)
+def demo_login(
+    db: Session = Depends(get_db)
+):
+    demo_user = get_or_create_demo_user(db)
+    
+    token = create_access_token(
+        {
+            "user_id": demo_user.id,
+            "email": demo_user.email,
+            "role": demo_user.role.role_name,
+            "team_id": demo_user.team_id
+        },
+        expires_delta=timedelta(minutes=30)
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }
+
 
 
 @router.post("/create-user")
