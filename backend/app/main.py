@@ -1,4 +1,6 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from app.core.bootstrap import create_default_admin
 import app.models
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth_routes import router as auth_router
@@ -8,7 +10,12 @@ from app.routes.team_routes import router as team_router
 from app.routes.webhook_routes import router as webhook_router
 from app.routes.websocket_routes import router as websocket_router
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_default_admin()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
