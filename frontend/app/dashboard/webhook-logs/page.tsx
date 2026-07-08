@@ -91,21 +91,22 @@ export default function WebhookLogsPage() {
               </TableHeader>
               <TableBody>
                 {paginated.map((log) => (
-                  <TableRow key={log.id} className="cursor-pointer" onClick={() => setSelectedId(log.id)}>
-                    <TableCell>{formatDate(log.received_at)}</TableCell>
-                    <TableCell className="font-medium">{log.service}</TableCell>
-                    <TableCell><LogLevelBadge value={log.level} /></TableCell>
-                    <TableCell className="max-w-xl truncate">{log.message}</TableCell>
-                    <TableCell>
+                  <TableRow key={log.id} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedId(log.id)}>
+                    <TableCell className="py-3.5 text-muted-foreground text-sm">{formatDate(log.received_at)}</TableCell>
+                    <TableCell className="py-3.5 font-semibold text-foreground">{log.service}</TableCell>
+                    <TableCell className="py-3.5"><LogLevelBadge value={log.level} /></TableCell>
+                    <TableCell className="py-3.5 max-w-xl truncate text-muted-foreground text-sm">{log.message}</TableCell>
+                    <TableCell className="py-3.5">
                       <Button
                         size="sm"
                         variant="outline"
+                        className="gap-1.5 text-xs font-semibold rounded-full border-border/60 hover:bg-primary/10 hover:text-primary transition-all duration-200"
                         onClick={(event) => {
                           event.stopPropagation();
                           setSelectedAnalysisId(log.id);
                         }}
                       >
-                        <Bot className="h-4 w-4" />
+                        <Bot className="h-3.5 w-3.5 text-primary animate-pulse-slow" />
                         AI Analysis
                       </Button>
                     </TableCell>
@@ -160,34 +161,43 @@ export default function WebhookLogsPage() {
           ) : selectedAnalysisLog.isError ? (
             <ErrorState message={getWebhookErrorMessage(selectedAnalysisLog.error, "Unable to load AI analysis.")} />
           ) : analysis ? (
-            <div className="space-y-5">
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-md border p-4">
-                  <p className="text-xs font-semibold uppercase text-muted-foreground">Severity</p>
-                  <div className="mt-2"><SeverityBadge value={analysis.severity} /></div>
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-xl border border-border/70 bg-secondary/5 p-4 flex flex-col justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Assessed Severity</p>
+                  <div className="mt-2.5"><SeverityBadge value={analysis.severity} /></div>
                 </div>
-                <div className="rounded-md border p-4">
-                  <p className="text-xs font-semibold uppercase text-muted-foreground">Confidence</p>
-                  <p className="mt-2 text-lg font-semibold">{formatConfidence(analysis.confidence)}</p>
+                <div className="rounded-xl border border-border/70 bg-secondary/5 p-4 flex flex-col justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pipeline Confidence</p>
+                  <p className="mt-2.5 text-xl font-extrabold text-primary">{formatConfidence(analysis.confidence)}</p>
                 </div>
-                <div className="rounded-md border p-4">
-                  <p className="text-xs font-semibold uppercase text-muted-foreground">Should Create Incident</p>
-                  <div className="mt-2">
+                <div className="rounded-xl border border-border/70 bg-secondary/5 p-4 flex flex-col justify-between">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Incident Created</p>
+                  <div className="mt-2.5">
                     <Badge variant={analysis.should_create_incident ? "high" : "low"}>
                       {analysis.should_create_incident ? "Yes" : "No"}
                     </Badge>
                   </div>
                 </div>
               </div>
-              <AnalysisBlock title="Summary" value={analysis.summary} />
-              <AnalysisBlock title="Root Cause" value={analysis.root_cause} />
-              <div className="rounded-md border p-4">
-                <p className="text-sm font-semibold">Recommendations</p>
-                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-                  {analysis.recommendations.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+              
+              <div className="space-y-4">
+                <AnalysisBlock title="AI Event Summary" value={analysis.summary} />
+                <AnalysisBlock title="Assessed Root Cause" value={analysis.root_cause} />
+                
+                <div className="rounded-xl border border-border/70 p-5 bg-card hover:bg-secondary/10 transition-colors">
+                  <p className="text-sm font-bold text-foreground">Actionable Recommendations</p>
+                  <ul className="mt-3.5 space-y-2.5 pl-1.5 text-sm text-muted-foreground">
+                    {analysis.recommendations.map((item, index) => (
+                      <li key={item} className="flex gap-2.5 items-start leading-relaxed">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary border border-primary/20 mt-0.5">
+                          {index + 1}
+                        </span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           ) : (
@@ -201,18 +211,18 @@ export default function WebhookLogsPage() {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-xs font-semibold uppercase text-muted-foreground">{label}</p>
-      <p className="mt-1 break-words">{value}</p>
+    <div className="rounded-xl border border-border/70 p-4 bg-secondary/15">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-1.5 text-sm font-semibold break-words">{value}</p>
     </div>
   );
 }
 
 function AnalysisBlock({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-md border p-4">
-      <p className="text-sm font-semibold">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{value}</p>
+    <div className="rounded-xl border border-border/70 p-5 bg-card hover:bg-secondary/10 transition-all duration-200">
+      <p className="text-sm font-bold text-foreground">{title}</p>
+      <p className="mt-2.5 text-sm leading-relaxed text-muted-foreground">{value}</p>
     </div>
   );
 }
