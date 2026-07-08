@@ -17,14 +17,14 @@ export function DemoLoginButton() {
   const handleDemoLogin = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/auth/demo-login`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/auth/demo-login`, {
         method: "POST",
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to start demo");
       }
-      
+
       const data = await response.json();
       login(data.access_token);
       toast.success("Welcome to the Sentinel AI Demo!");
