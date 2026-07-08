@@ -12,7 +12,7 @@ from app.routes.websocket_routes import router as websocket_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    create_default_admin()
+    create_default_admin()  
     yield
 
 app = FastAPI(lifespan=lifespan)
